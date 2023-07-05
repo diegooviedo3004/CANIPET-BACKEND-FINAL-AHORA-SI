@@ -18,7 +18,8 @@ from rest_framework import serializers
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.status import HTTP_200_OK, HTTP_400_BAD_REQUEST
-
+from datetime import datetime
+from django.db.models import Q
 # Importar el rest FRAMEWORK
 
 class PacienteSerializer(serializers.ModelSerializer):
@@ -45,7 +46,19 @@ def index(request):
 
     if paciente_id:
         paciente_para_citas = Paciente.objects.get(id=paciente_id)
-        citas = Citas.objects.filter(paciente=paciente_para_citas).order_by("-fecha_cita").all()
+      
+
+        # Obtén la fecha y hora actual
+        now = datetime.now()
+
+        # Realiza la consulta para obtener las citas a futuro del paciente
+        citas = Citas.objects.filter(
+            paciente=paciente_para_citas,
+            fecha_cita__gt=now.date(),  # Filtra por fechas mayores a la actual
+        ).exclude(
+            Q(fecha_cita=now.date()) & Q(hora__lte=now.time())  # Excluye las citas pasadas en el día actual
+        ).order_by("fecha_cita", "hora")
+
         citas = CitasSerializer(citas, many=True)
 
 
