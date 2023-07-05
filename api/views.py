@@ -26,6 +26,11 @@ class PacienteSerializer(serializers.ModelSerializer):
         model = Paciente
         fields = '__all__'
 
+class CitasSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Citas
+        fields = '__all__'
+
 class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
@@ -35,6 +40,14 @@ class ProductSerializer(serializers.ModelSerializer):
 def index(request):
     data = json.loads(request.body)
     user_code = data['code']
+    
+    paciente_id = request.GET.get('paciente')
+
+    if paciente_id:
+        paciente_para_citas = Paciente.objects.get(id=paciente_id)
+        citas = Citas.objects.filter(paciente=paciente_para_citas).order_by("-fecha_cita").all()
+        citas = CitasSerializer(citas, many=True)
+
 
     # Realiza la consulta de la base de datos
     paciente = Paciente.objects.filter(cliente__codigo=user_code)
@@ -55,16 +68,29 @@ def index(request):
         }
         return JsonResponse(response_data, status=400)
     if paciente:
-        response_data = {
-                'msg': "OK",
-                'pacientes': pacientes_data,
-                "productos_5": productos_data[0:5],
-                'productos': productos_data,
-                "id_vet": veterinario.id,
-                "lat": veterinario_info.lat ,
-                "lon": veterinario_info.lon,
-                "nombre_clinica": veterinario_info.nombre_clinica
-        }
+        if paciente_id:
+            response_data = {
+                    'msg': "OK",
+                    'pacientes': pacientes_data,
+                    "productos_5": productos_data[0:5],
+                    'productos': productos_data,
+                    "id_vet": veterinario.id,
+                    "lat": veterinario_info.lat ,
+                    "lon": veterinario_info.lon,
+                    "nombre_clinica": veterinario_info.nombre_clinica,
+                    "citas": citas.data
+            }
+        else:
+            response_data = {
+                    'msg': "OK",
+                    'pacientes': pacientes_data,
+                    "productos_5": productos_data[0:5],
+                    'productos': productos_data,
+                    "id_vet": veterinario.id,
+                    "lat": veterinario_info.lat ,
+                    "lon": veterinario_info.lon,
+                    "nombre_clinica": veterinario_info.nombre_clinica
+            }
         return JsonResponse(response_data, status=200)
     else:
             # Devuelve una respuesta con estado 400 si no hay productos
@@ -77,6 +103,7 @@ def index(request):
     #        'msg': "Ha ocurrido un error",
     #     }
     #     return JsonResponse(response_data, status=400)
+
 
 @csrf_exempt
 def descargar(request):
